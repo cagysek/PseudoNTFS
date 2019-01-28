@@ -136,6 +136,7 @@ void Vfs::read_exists_vfs()
    
     this->read_items();
     
+    
     Bitmap *new_bitmap = new Bitmap(this->boot_record->cluster_count);
     fseek(this->file, this->boot_record->bitmap_start_address, SEEK_SET);
     fread(new_bitmap->map, sizeof(bool), new_bitmap->size, this->file);
@@ -170,17 +171,16 @@ void Vfs::read_items()
             Mft_fragment *fragment = new Mft_fragment();
             fread(fragment, sizeof(Mft_fragment), 1, this->file);
             
-            //it's ugly, but it works, sometimes infinity loop
+         /*   //it's ugly, but it works, sometimes infinity loop
             if (fragment->fragment_start_address == 0)
             {
                 break;
             }
-            
+          */
             tmp.push_back(fragment);
             
             fragments++;
         }
-        
         item->fragments = tmp;
     }
 }
@@ -414,7 +414,6 @@ bool Vfs::insert_file(FILE *source, Mft_item *destination, std::string filename)
     
     int buffer_index = 0;
     int in_row_index = 0;
-    char buffers[CLUSTER_SIZE];
     
     std::vector<Mft_fragment*>::iterator it;
     for(it = item->fragments.begin() ; it != item->fragments.end() ; ++it)
