@@ -7,9 +7,13 @@
 //
 
 #include <iostream>
+#include "Ntfs.hpp"
+
 
 int main(int argc, const char * argv[]) {
-    // insert code here...
-    std::cout << "Hello, World!\n";
+    
+    Ntfs *ntfs = new Ntfs("/Users/cagy/Documents/skola/ZOS/NTFS/test.dat");
+    ntfs->create_vfs();
+
     return 0;
 }
