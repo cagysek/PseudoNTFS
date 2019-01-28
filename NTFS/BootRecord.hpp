@@ -22,8 +22,8 @@ class BootRecord
     
 public:
     BootRecord(int32_t disk_size, int32_t cluster_size);
+    BootRecord(){};
     
-    void test();
     char signature[9];              //login autora FS
     char volume_descriptor[251];    //popis vygenerovaného FS
     int32_t disk_size;              //celkova velikost VFS
@@ -35,6 +35,9 @@ public:
     int32_t mft_max_fragment_count; //maximalni pocet fragmentu v jednom zaznamu v mft (pozor, ne souboru)
     // stejne jako   MFT_FRAGMENTS_COUNT
     void print_bootrecord_details();
+    long mft_items_count;
+    
+    void write(FILE* file);
     
 };
 #endif /* BootRecord_hpp */

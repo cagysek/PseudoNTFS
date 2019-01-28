@@ -17,7 +17,8 @@ BootRecord::BootRecord(int32_t disk_size, int32_t cluster_size)
     this->cluster_size = cluster_size;
     this->cluster_count = disk_size / cluster_size;
     this->mft_start_address = sizeof(BootRecord);
-    this->bitmap_start_address = sizeof(BootRecord) + sizeof(Mft_item) + (disk_size * MFT_PERCENTAGE_USAGE);
+    this->bitmap_start_address = sizeof(BootRecord) + (disk_size * MFT_PERCENTAGE_USAGE);
+    
     this->data_start_address =sizeof(BootRecord) + this->bitmap_start_address + sizeof(Bitmap);
     
     this->print_bootrecord_details();
@@ -27,10 +28,17 @@ BootRecord::BootRecord(int32_t disk_size, int32_t cluster_size)
 void BootRecord::print_bootrecord_details()
 {
     std::cout << "BOOTRECORD" << std::endl;
-    std::cout << "Disk size: " << std::to_string(this->disk_size / 1024) << " kB" << std::endl;
-    std::cout << "Cluster size: " << std::to_string(this->cluster_size / 1024) << " kB" << std::endl;
+    std::cout << "Disk size: " << std::to_string(this->disk_size) << " B" << std::endl;
+    std::cout << "Cluster size: " << std::to_string(this->cluster_size) << " B" << std::endl;
     std::cout << "Cluster count: " << std::to_string(this->cluster_count) << std::endl;
     std::cout << "MFT start address: " << std::to_string(this->mft_start_address) << std::endl;
     std::cout << "Bitmap start address: " << std::to_string(this->bitmap_start_address) << std::endl;
     std::cout << "Data start address: " << std::to_string(this->data_start_address) << std::endl;
+}
+
+void BootRecord::write(FILE *file)
+{
+    fseek(file, 0, SEEK_SET);
+    fwrite(this, sizeof(BootRecord), 1, file);
+    fflush(file);
 }

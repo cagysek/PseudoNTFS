@@ -11,14 +11,15 @@
 
 Vfs::Vfs(std::string filename, int32_t size)
 {
-    
     this->filename = filename;
     
     this->boot_record = new BootRecord(size, CLUSTER_SIZE);
     this->bitmap = new Bitmap(this->boot_record->cluster_count);
-    
-    //this->create_root();
-    
+}
+
+Vfs::Vfs(std::string filename)
+{
+    this->filename = filename;
 }
 
 int32_t Vfs::create_uniq_mft_uid()
@@ -73,10 +74,12 @@ void Vfs::print_mft_item(Mft_item *item)
     std::cout << "Name: " << (item->item_name) << std::endl;
     std::cout << "Parent UID: " + std::to_string(item->parent_id) << std::endl;
     std::cout << "Folder: " << (item->isDirectory ? "Yes" : "No") << std::endl;
-    std::cout << "Size: " + std::to_string(item->item_size / 1024) << " kB" << std::endl;
+    std::cout << "Size: " + std::to_string(item->item_size ) << " B" << std::endl;
+    std::cout << "Fragments count: " + std::to_string(item->fragments_count ) << std::endl;
+    std::cout << "Contains clusters: " + std::to_string(item->cluster_count ) << std::endl;
     
-    std::cout << "Fragments: " << item->cluster_count << std::endl;
-    
+    std::cout << "Fragments: " << std::endl;
+ 
     int i = 1;
     std::vector<Mft_fragment*>::iterator it;
     for(it = item->fragments.begin() ; it != item->fragments.end() ; ++it)
@@ -87,42 +90,99 @@ void Vfs::print_mft_item(Mft_item *item)
     }
 }
 
-void Vfs::print_vfs_details()
-{
-    
-}
-
 void Vfs::write_vfs()
 {
-    //create new file
+    this->boot_record->mft_items_count = this->mft_items.size();
     
+    this->boot_record->write(this->file);
+
+    write_items();
     
-    fwrite(this->boot_record, sizeof(BootRecord), 1, this->file);
-    fflush(this->file);
+    this->bitmap->write(file, this->boot_record->bitmap_start_address);
+}
+
+void Vfs::write_items()
+{
+    int i = 0;
+    int fragments = 0;
     
-//    fseek(this->file, this->boot_record->mft_start_address, SEEK_SET);
-//    fwrite(&this->mft_items, sizeof(Mft_item), sizeof(this->mft_items), this->file);
-//    fflush(this->file);
-    
-    fseek(this->file, this->boot_record->bitmap_start_address, SEEK_SET);
-    fwrite(this->bitmap->map, sizeof(bool), 1, this->file);
-    fflush(this->file);
+    std::vector<Mft_item*>::iterator it;
+    for(it = this->mft_items.begin() ; it != this->mft_items.end() ; ++it)
+    {
+        //fseek(this->file, this->boot_record->mft_start_address + (sizeof(Mft_item) * i), SEEK_SET);
+        fseek(this->file, this->boot_record->mft_start_address + (sizeof(Mft_item) * i) + (sizeof(Mft_fragment) * fragments), SEEK_SET);
+        fwrite((*it), sizeof(Mft_item), 1, this->file);
+        fflush(this->file);
+        
+        std::vector<Mft_fragment*>::iterator it2;
+        for(it2 = (*it)->fragments.begin() ; it2 != (*it)->fragments.end() ; ++it2)
+        {
+            fwrite((*it2), sizeof(Mft_fragment), 1, this->file);
+            fflush(this->file);
+            fragments++;
+        }
+
+        i++;
+    }
 }
 
 void Vfs::read_exists_vfs()
 {
+    BootRecord *new_boot_record = new BootRecord();
+    fread(new_boot_record, sizeof(BootRecord), 1, this->file);
     
+    this->boot_record = new_boot_record;
+    this->boot_record->print_bootrecord_details();
+   
+    this->read_items();
     
-    fread(this->boot_record, sizeof(BootRecord), 1, this->file);
-    
-   // fseek(this->file, this->boot_record->mft_start_address, SEEK_SET);
-   // fread(&this->mft_items, sizeof(), 1 , this->file);
-    
-    
+    Bitmap *new_bitmap = new Bitmap(this->boot_record->cluster_count);
     fseek(this->file, this->boot_record->bitmap_start_address, SEEK_SET);
-    fread(this->bitmap->map, sizeof(bool), this->bitmap->size, this->file);
+    fread(new_bitmap->map, sizeof(bool), new_bitmap->size, this->file);
     
-    printf("Loaded..");
+    this->bitmap = new_bitmap;
+}
+
+void Vfs::read_items()
+{
+    int fragments = 0;
+    
+    for (int i = 0; i < this->boot_record->mft_items_count; i++)
+    {
+        Mft_item *item = new Mft_item();
+        fseek(this->file, this->boot_record->mft_start_address + (sizeof(Mft_item) * i) + (sizeof(Mft_fragment) * fragments), SEEK_SET);
+        //fseek(this->file, this->boot_record->mft_start_address + (sizeof(Mft_item) * i), SEEK_SET);
+        fread(item, sizeof(Mft_item), 1, this->file);
+        this->mft_items.push_back(item);
+        
+        
+        //set root, it's ugly, but it works 
+        if (i == 0)
+        {
+            this->current_path.push_back(item->item_name);
+            this->current_item = item;
+        }
+        
+        std::vector<Mft_fragment*> tmp;
+        
+        for (int j = 0 ; j < item->fragments_count ; j++)
+        {
+            Mft_fragment *fragment = new Mft_fragment();
+            fread(fragment, sizeof(Mft_fragment), 1, this->file);
+            
+            //it's ugly, but it works, sometimes infinity loop
+            if (fragment->fragment_start_address == 0)
+            {
+                break;
+            }
+            
+            tmp.push_back(fragment);
+            
+            fragments++;
+        }
+        
+        item->fragments = tmp;
+    }
 }
 
 
@@ -148,6 +208,8 @@ Mft_item* Vfs::create_new_item(int32_t uid, int32_t parent_id, bool isDirectory,
 
 void Vfs::set_up_fragments(Mft_item **item, int32_t size)
 {
+    (*item)->fragments_count = 0;
+    
     //round to down
     int cluster_needed = size / CLUSTER_SIZE;
     
@@ -214,6 +276,7 @@ void Vfs::set_up_fragments(Mft_item **item, int32_t size)
             (*item)->add_fragment(fragment);
             
             this->mark_bitmap(free_id, in_row);
+            
             break;
         }
         
@@ -227,7 +290,7 @@ void Vfs::set_up_fragments(Mft_item **item, int32_t size)
         std::cout << "BITMAP FULL" << "Found: " << found << " Needed: " << cluster_needed << std::endl;
     }
     
-    //this->bitmap->write(this->file, this->boot_record->bitmap_start_address);
+    this->write_vfs();
 }
 
 void Vfs::mark_bitmap(int from, int count)
@@ -306,7 +369,7 @@ void Vfs::remove_mft_item(Mft_item* mft_item)
     
     this->mft_items.erase(std::remove(this->mft_items.begin(), this->mft_items.end(), mft_item));
     
-    delete mft_item;
+    this->write_vfs();
 }
 
 int Vfs::get_children_count(int parent_id)
@@ -371,12 +434,14 @@ bool Vfs::insert_file(FILE *source, Mft_item *destination, std::string filename)
         in_row_index = 0;
         
     }
+    
+    this->write_vfs();
+    
     return true;
 }
 
 void Vfs::print_content(Mft_item *item)
 {
-    printf("%s\n", item->item_name);
     char buffer[CLUSTER_SIZE];
     
     int in_row_index = 0;
@@ -477,6 +542,7 @@ void Vfs::defrag_files()
         //find item
         auto item = this->find_mft_item_by_uid(map_iterator->first);
         
+        
         //generate new fragments
         this->set_up_fragments(&item, item->item_size);
         
@@ -503,6 +569,9 @@ void Vfs::defrag_files()
             in_row_index = 0;
         }
     }
+    
+    this->write_vfs();
+    
 }
 
 void Vfs::set_current_item(Mft_item *item)

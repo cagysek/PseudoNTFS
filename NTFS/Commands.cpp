@@ -32,6 +32,7 @@ void Commands::create_new_directory(Vfs *vfs, std::string name)
     }
     else
     {
+        vfs->write_vfs();
         printf("OK\n");
     }
 }
@@ -40,7 +41,7 @@ void Commands::show_files(Vfs *vfs, std::string path)
 {
     
     int item_id = IoUtils::check_path(vfs, path, false);
-    printf("%d\n", item_id);
+
     if(item_id < 0)
     {
         printf("PATH NOT FOUND\n");
@@ -162,6 +163,7 @@ void Commands::copy_file(Vfs* vfs, std::string filename, std::string destination
     }
     else
     {
+        vfs->write_vfs();
         printf("OK\n");
     }
 }
@@ -188,6 +190,8 @@ void Commands::move_file(Vfs* vfs, std::string filename, std::string destination
     Mft_item *d_folder = vfs->find_mft_item_by_uid(d_parent_id);
     
     s_item->parent_id = d_folder->uid;
+    
+    vfs->write_vfs();
     
     printf("OK\n");
 }
@@ -333,15 +337,7 @@ void Commands::export_file_from_ntfs(Vfs *vfs, std::string filename, std::string
 
 void Commands::format_vfs(Vfs *vfs, std::string size, std::string type)
 {
-    //valgrind is now crying
-    delete vfs->boot_record;
-    delete vfs->bitmap;
     
-    std::vector<Mft_item*>::iterator it;
-    for(it = vfs->mft_items.begin() ; it != vfs->mft_items.end() ; ++it)
-    {
-        delete (*it);
-    }
     
     vfs->mft_items.clear();
     
@@ -358,11 +354,14 @@ void Commands::format_vfs(Vfs *vfs, std::string size, std::string type)
     
     int32_t newSize = atoi(size.c_str()) * convert_number;
     
+    //valgrind is now crying
     vfs->boot_record = new BootRecord(newSize, CLUSTER_SIZE);
     vfs->bitmap = new Bitmap(vfs->boot_record->cluster_count);
     
     vfs->current_path.clear();
     vfs->create_root();
+    
+    vfs->write_vfs();
     
     printf("OK\n");
 }
@@ -388,5 +387,11 @@ void Commands::load_commands(std::string path)
 void Commands::defrag(Vfs *vfs)
 {
     vfs->defrag_files();
+    printf("OK\n");
+}
+
+void Commands::exit(Vfs *vfs)
+{
+    vfs->write_vfs();
     printf("OK\n");
 }

@@ -18,25 +18,32 @@ Ntfs::Ntfs(std::string filename)
 void Ntfs::create_vfs()
 {
     //temp
-   // remove(this->filename.c_str());
+    //remove(this->filename.c_str());
     
-    Ntfs::vfs = new Vfs(this->filename, DISK_SIZE);
     
-    if (IoUtils::is_file_exists(Ntfs::vfs->filename))
+    
+    if (IoUtils::is_file_exists(this->filename))
     {
+        Ntfs::vfs = new Vfs(this->filename);
         Ntfs::vfs->file = fopen(this->filename.c_str(), "r+");
-        Ntfs::vfs->create_root();
+        
         
         printf("Loading existing file...\n");
-   //     Ntfs::vfs->read_exists_vfs();
-        //Ntfs::vfs->write_vfs();
+        Ntfs::vfs->read_exists_vfs();
+        printf("Loaded\n");
     }
     else
     {
-        Ntfs::vfs->file = fopen(this->filename.c_str(), "wb");
+        Ntfs::vfs = new Vfs(this->filename, DISK_SIZE);
+        FILE *file = fopen(this->filename.c_str(), "wb");
+        fclose(file);
+        
+        Ntfs::vfs->file = fopen(this->filename.c_str(), "r+");
         Ntfs::vfs->create_root();
         printf("Creating new file...\n");
-      //  Ntfs::vfs->write_vfs();
+        
+        Ntfs::vfs->write_vfs();
+        std::cout <<  "Created" << std::endl;
     }
     
     initialize_enum_types();
@@ -66,7 +73,6 @@ void Ntfs::create_vfs()
     Ntfs::vfs->print_mft_items();
     
     fclose(Ntfs::vfs->file);
-    std::cout << "vfs created" << std::endl;
 }
 
 bool Ntfs::do_action(std::string command)
@@ -128,6 +134,7 @@ bool Ntfs::do_action(std::string command)
             break;
         case end:
             std::cout << "Closing..." << ".\n";
+            Commands::exit(Ntfs::vfs);
             return false;
             break;
             

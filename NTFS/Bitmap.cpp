@@ -75,3 +75,11 @@ void Bitmap::write(FILE *file, int32_t address)
     fwrite(this->map, sizeof(bool), this->size, file);
     fflush(file);
 }
+
+void Bitmap::print()
+{
+    for (int i = 0 ; i < this->size; i++)
+    {
+        std::cout << i << " " << this->map[i] << std::endl;
+    }
+}

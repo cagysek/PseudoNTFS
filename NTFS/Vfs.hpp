@@ -28,10 +28,13 @@ public:
     
     std::string filename;
     Vfs(std::string filename, int32_t size);
+    Vfs(std::string filename);
     BootRecord *boot_record;
     std::vector<Mft_item*> mft_items;
     Bitmap *bitmap;
     FILE *file;
+    
+    BootRecord test;
     
     std::vector<std::string> current_path;
     
@@ -40,7 +43,9 @@ public:
     int32_t create_uniq_mft_uid();
     bool is_uid_used(int32_t uid);
     void write_vfs();
+    void write_items();
     void read_exists_vfs();
+    void read_items();
     
     void create_root();
     void print_mft_items();

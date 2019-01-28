@@ -28,6 +28,7 @@ public:
     void reset_bitmap();
     int free_cluster_count();
     void write(FILE *file, int32_t address);
+    void print();
 };
 
 

@@ -20,6 +20,7 @@ public:
     int32_t fragment_start_index;
     
     Mft_fragment(int32_t fragment_start_address, int32_t fragment_count, int32_t fragment_start_index);
+    Mft_fragment(){};
 };
 
 #endif /* mft_fragment_h */

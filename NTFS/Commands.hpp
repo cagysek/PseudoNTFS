@@ -37,6 +37,7 @@ public:
     static void format_vfs(Vfs* vfs, std::string size, std::string type);
     static void load_commands(std::string path);
     static void defrag(Vfs* vfs);
+    static void exit(Vfs* vfs);
 };
 
 

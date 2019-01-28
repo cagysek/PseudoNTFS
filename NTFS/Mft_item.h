@@ -26,8 +26,10 @@ public:
     int32_t item_size;                                  //velikost souboru v bytech
     std::vector<Mft_fragment*> fragments;               //fragmenty souboru
     int cluster_count;
+    int32_t fragments_count;
     
     Mft_item(int32_t uid, int32_t parent_id, bool isDirectory, int8_t item_order, int8_t item_order_total, char *name, int32_t size);
+    Mft_item(){};
     void set_up_fragmets(int32_t size);
     void create_fragments(int count);
     void add_fragment(Mft_fragment* fragment);
